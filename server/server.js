@@ -1,64 +1,99 @@
 var net = require('net');
 
-var channels = {};
+var rooms = {};
 
-/* -- channel list format
+/* -- room list format
   {
-    channel1: {
-      userName1: socket1,
-      userName2: socket2
-    },
-    channel2: {
-      ...
-    }
+    roomName1: [socket1, socket2],
+    roomName2: [ ... ]
   }
 */
 
-// var users = {};
+var screenNames = [];
 
-/* -- user list format
-  {
-    username1: {
-      socket: socket,
-      channel: channelName
-    },
-    username2: {
-      ...
+var broadcast = function (message, socket) {
+  var room = rooms[socket._userInfo.room];
+  if (message[0] !== '/') {
+    for (var i = 0; i < room.length; i++) {
+        room[i].write('<= ' + socket._userInfo.screenName + ': ' + message + '\r\n');
     }
-  }
-*/
-
-var broadcast = function (socket, message, channel) {
-  if (message) {
-    for (user in channels[channel]) {
-        channels[channel][user].write('<= ' + user + ': ' + message);
-    }
+  } else {
+    var command = message.toLowerCase().split(' ');
+    runCommand[command[0].slice(1)](command[1]);
   }
 };
 
 var requestHandler = function (socket) {
+  socket._userInfo = {screenName: null, room: null};
   socket.write('<= Welcome to Super Best Buds Chat!\r\n<= Login name?\r\n');
   console.log(socket);
 
   // -- User Input
 
   socket.on('data', function (data) {
-    if (data) {
+    if (socket._userInfo.screenName && socket._userInfo.room) {
       broadcast(socket, data);
+    } else if (socket._userInfo.screenName) {
+      joinroom(socket, data);
+    } else {
+
     }
   });
 
   socket.on('end', function () {
-    // delete references to user in users and channels
-    // broadcast "user has left the channel" message
+    for (var i = 0; i < rooms[socket._userInfo.room].length; i++) {
+      if (rooms[socket._userInfo.room][i] === socket) {
+        rooms[socket._userInfo.room].splice(i, 1);
+        return;
+      }
+    };
+    broadcast(socket._userInfo.screenName + ' has left the room.', socket);
   });
 };
 
-var joinChannel = function (socket, username, channel) {
-  if (!channels[channel]) {
-    channels[channel] = {};
+var selectScreenName = function (name, socket) {
+  for (var i = 0; i < screenNames.length; i++) {
+    if (name === screenNames[i]) {
+      socket.write('<= Sorry, name taken.\r\n<= Login name?\r\n');
+      return;
+    }
   }
-  channels[channel][username] = socket;
+  socket.write('<= Welcome, ' + name + '!\r\n<= Login name?\r\n');
 };
+
+var displayrooms = function () {
+  socket.write('<= Available rooms are:\r\n');
+  for (room in rooms) {
+    socket.write('<= * ' + room + '(' + rooms[room].length + ')');
+  }
+  socket.write('<= Type "/join <room_name>" to join a room.\r\n<= If your room does not exist, one will be created.\r\n');
+};
+
+// type /who <roomName> in chat to
+var displayUsers = function () {
+
+}
+
+var runCommand = {
+  who: function (room, socket) {
+
+  },
+
+  join: function (room, socket) {
+    if (!rooms[room]) {
+      rooms[room] = [];
+    }
+    rooms[room].push(socket);
+    socket.write('Joining room: ' + room + '\r\n');
+  },
+
+  quit: function (socket) {
+    socket.close();
+  },
+
+  rooms: function (socket) {
+
+  }
+}
 
 var server = net.createServer(requestHandler).listen(8080);
