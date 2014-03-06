@@ -11,32 +11,36 @@ var rooms = {};
 
 var screenNames = [];
 
-var broadcast = function (message, socket) {
+var broadcast = function (socket, message) {
   var room = rooms[socket._userInfo.room];
-  if (message[0] !== '/') {
+  if (message[0] !== '\/') {
     for (var i = 0; i < room.length; i++) {
-        room[i].write('<= ' + socket._userInfo.screenName + ': ' + message + '\r\n');
+        room[i].write(socket._userInfo.screenName + ': ' + message + '\r\n');
     }
   } else {
     var command = message.toLowerCase().split(' ');
-    runCommand[command[0].slice(1)](command[1]);
+    if (runCommand[command[0].slice(1)]) {
+      runCommand[command[0].slice(1)](socket, command[1]);
+    } else {
+      socket.write('Unknown command "' + command[0].slice(1) + '".\r\nType "/help" or "/?" to view commands.\r\n');
+    }
   }
 };
 
 var requestHandler = function (socket) {
   socket._userInfo = {screenName: null, room: null};
-  socket.write('<= Welcome to Super Best Buds Chat!\r\n<= Login name?\r\n');
-  console.log(socket);
+  socket.write('Welcome to Super Best Buds Chat!\r\nLogin name?\r\n');
 
   // -- User Input
 
   socket.on('data', function (data) {
+    data = data.toString().slice(0, data.toString().length - 2);
     if (socket._userInfo.screenName && socket._userInfo.room) {
       broadcast(socket, data);
     } else if (socket._userInfo.screenName) {
-      joinroom(socket, data);
+      runCommand.join(socket, data);
     } else {
-
+      selectScreenName(socket, data);
     }
   });
 
@@ -51,48 +55,51 @@ var requestHandler = function (socket) {
   });
 };
 
-var selectScreenName = function (name, socket) {
+var selectScreenName = function (socket, name) {
   for (var i = 0; i < screenNames.length; i++) {
     if (name === screenNames[i]) {
-      socket.write('<= Sorry, name taken.\r\n<= Login name?\r\n');
+      socket.write('Sorry, "' + name + '" is taken.\r\nLogin name?\r\n');
       return;
     }
   }
-  socket.write('<= Welcome, ' + name + '!\r\n<= Login name?\r\n');
+  socket._userInfo.screenName = name;
+  screenNames.push(name);
+  socket.write('Welcome, ' + name + '!\r\nType "/help" or "/?" to view commands.\r\n');
 };
-
-var displayrooms = function () {
-  socket.write('<= Available rooms are:\r\n');
-  for (room in rooms) {
-    socket.write('<= * ' + room + '(' + rooms[room].length + ')');
-  }
-  socket.write('<= Type "/join <room_name>" to join a room.\r\n<= If your room does not exist, one will be created.\r\n');
-};
-
-// type /who <roomName> in chat to
-var displayUsers = function () {
-
-}
 
 var runCommand = {
-  who: function (room, socket) {
-
+  who: function (socket, room) {
+    if (room) {
+      for (var i = 0; i < rooms[room].length; i++) {
+        socket.write('* ' + rooms[room][i]._userInfo.screenName + '\r\n');
+      }
+    } else {
+      for (var i = 0; i < screenNames.length; i++) {
+        socket.write('* ' + screenNames[i] + '\r\n');
+      }
+    }
+    socket.write('end of list.\r\n');
   },
 
-  join: function (room, socket) {
+  join: function (socket, room) {
     if (!rooms[room]) {
       rooms[room] = [];
     }
+    socket._userInfo.room = room;
     rooms[room].push(socket);
     socket.write('Joining room: ' + room + '\r\n');
   },
 
   quit: function (socket) {
-    socket.close();
+    socket.end('BYE');
   },
 
   rooms: function (socket) {
-
+    socket.write('Available rooms are:\r\n');
+    for (room in rooms) {
+      socket.write('* ' + room + ' (' + rooms[room].length + ')');
+    }
+    socket.write('Type "/join <room_name>" to join a room.\r\nIf your room does not exist, one will be created.\r\n');
   }
 }
 
