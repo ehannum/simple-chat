@@ -42,7 +42,7 @@ var requestHandler = function (socket) {
       if (runCommand[command[0].slice(1)]) {
         runCommand[command[0].slice(1)](socket, command[1], command.slice(2).join(' '));
       } else {
-        socket.write('Unknown command "' + command[0].slice(1) + '".\r\nType "/help" to view commands.\r\n');
+        socket.write(' * Unknown command "' + command[0].slice(1) + '".\r\nType "/help" to view commands.\r\n');
       }
     }
   });
@@ -90,13 +90,13 @@ var runCommand = {
   help: function (socket) {
     socket.write(
       '\r\nList of all commands\r\n\r\n' +
-      '  /help . . . . . . . . Displays this list\r\n' +
-      '  /join <room_name> . . Switches to the specified chatroom\r\n' +
-      '  /quit . . . . . . . . Disconnects from the server\r\n' +
-      '  /rooms  . . . . . . . Lists all joinable chatrooms\r\n' +
-      '  /w <user> <message> . Sends private message to one user\r\n' +
-      '  /who  . . . . . . . . Lists all online users\r\n' +
-      '  /who <room_name>  . . Lists all users in the specified chatroom\r\n\r\n'
+      ' * /help . . . . . . . . Displays this list\r\n' +
+      ' * /join <room_name> . . Switches to the specified chatroom\r\n' +
+      ' * /quit . . . . . . . . Disconnects from the server\r\n' +
+      ' * /rooms  . . . . . . . Lists all joinable chatrooms\r\n' +
+      ' * /w <user> <message> . Sends private message to one user\r\n' +
+      ' * /who  . . . . . . . . Lists all online users\r\n' +
+      ' * /who <room_name>  . . Lists all users in the specified chatroom\r\n\r\n'
     );
   },
 
@@ -120,7 +120,7 @@ var runCommand = {
 
   join: function (socket, room) {
     if (socket._userInfo.room) {
-      broadcast(socket, socket._userInfo.screenName + ' has left the room.');
+      broadcast(socket, ' * ' + socket._userInfo.screenName + ' has left the room.');
       for (var i = 0; i < rooms[socket._userInfo.room].length; i++) {
         if (rooms[socket._userInfo.room][i] === socket) {
           rooms[socket._userInfo.room].splice(i, 1);
@@ -144,8 +144,14 @@ var runCommand = {
 
   w: function (socket, user, message) {
     for (var room in rooms) {
-
+      for (var i = 0; i < rooms[room].length; i++) {
+        if (rooms[room][i]._userInfo.screenName === user) {
+          rooms[room][i].write(' ~ ' + socket._userInfo.screenName + ' whispers: ' + message + ' ~\r\n');
+          return;
+        }
+      }
     }
+    socket.write(' * User "' + user + '" not found.');
   },
 
   rooms: function (socket) {
