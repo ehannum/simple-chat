@@ -32,8 +32,7 @@ var requestHandler = function (socket) {
       if (socket._userInfo.screenName && socket._userInfo.room) {
         broadcast(socket, data);
       } else if (socket._userInfo.screenName) {
-        runCommand.rooms(socket);
-        runCommand.join(socket, data);
+        return;
       } else {
         selectScreenName(socket, data);
       }
@@ -62,6 +61,7 @@ var selectScreenName = function (socket, name) {
   socket._userInfo.screenName = name;
   screenNames.push(name);
   socket.write('Welcome, ' + name + '!\r\nType "/help" to view commands.\r\n');
+  runCommand.rooms(socket);
 };
 
 var disconnectSocket = function (socket) {
