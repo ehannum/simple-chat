@@ -135,7 +135,12 @@ var runCommand = {
     }
     socket._userInfo.room = room;
     rooms[room].push(socket);
-    socket.write('Joining room: ' + room + '\r\n');
+    socket.write('Joining room: ' + room + '\r\nUsers in room:\r\n');
+    broadcast(' * ' + socket._userInfo.screenName + ' has joined the chat.');
+    for (var i = 0; i < rooms[room].length; i++) {
+      socket.write(' * ' + rooms[room][i]._userInfo.screenName);
+    };
+    socket.write('end of list\r\n\r\n');
   },
 
   quit: function (socket) {
