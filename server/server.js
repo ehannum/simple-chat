@@ -84,7 +84,7 @@ var disconnectSocket = function (socket) {
       }
     }
   }
-}
+};
 
 var runCommand = {
   help: function (socket) {
@@ -111,8 +111,8 @@ var runCommand = {
         socket.write('Room "' + room + '" could not be found.\r\n');
       }
     } else {
-      for (var i = 0; i < screenNames.length; i++) {
-        socket.write('* ' + screenNames[i] + '\r\n');
+      for (var j = 0; j < screenNames.length; j++) {
+        socket.write('* ' + screenNames[j] + '\r\n');
       }
       socket.write('end of list\r\n');
     }
@@ -136,11 +136,11 @@ var runCommand = {
     socket._userInfo.room = room;
     rooms[room].push(socket);
     socket.write('Joining room: ' + room + '\r\nUsers in room:\r\n');
-    broadcast(' * ' + socket._userInfo.screenName + ' has joined the chat.');
-    for (var i = 0; i < rooms[room].length; i++) {
-      socket.write(' * ' + rooms[room][i]._userInfo.screenName);
-    };
+    for (var j = 0; j < rooms[room].length; j++) {
+      socket.write(' * ' + rooms[room][j]._userInfo.screenName + '\r\n');
+    }
     socket.write('end of list\r\n\r\n');
+    broadcast(socket, ' * ' + socket._userInfo.screenName + ' has joined the chat.');
   },
 
   quit: function (socket) {
@@ -161,11 +161,13 @@ var runCommand = {
 
   rooms: function (socket) {
     socket.write('Available rooms are:\r\n');
-    for (room in rooms) {
+    for (var room in rooms) {
       socket.write('* ' + room + ' (' + rooms[room].length + ')\r\n');
     }
     socket.write('end of list\r\nType "/join <room_name>" to join a room.\r\nIf your room does not exist, one will be created.\r\n');
   }
-}
+};
 
-var server = net.createServer(requestHandler).listen(8080);
+var port = process.env.PORT || 8080;
+
+var server = net.createServer(requestHandler).listen(port);
